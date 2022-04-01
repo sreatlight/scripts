@@ -1,4 +1,4 @@
-# scripts
+# scripts - metoca
 Remove special characters from file then outputs in terminal
 
 USAGE:
