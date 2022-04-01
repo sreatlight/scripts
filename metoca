@@ -1,0 +1,16 @@
+#!/bin/bash
+
+file=$1
+
+if [ $# -eq 1 ]; then
+	tmp=$( sed 's/ //g' $file )
+
+	tmp=$( echo $tmp | sed --expression=$'s/[^[:print:]\t]//g')
+	#tmp=$( echo $tmp | sed -e $'s/[^[:print:]\t//g')
+	tmp=$( echo $tmp | sed --expression=':a;N;$!ba;s/\n//g')
+	tmp=$( echo $tmp | sed --expression=s'/ //g')
+
+
+
+	echo $tmp
+fi
