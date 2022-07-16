@@ -25,5 +25,3 @@ EXAMPLE:
 SQLi test with bash and curl - now with help inside ;)
 Also OSCP friendly ... is just a curl
 
-USAGE:
-> basq -w <wordlist> -r <curl file command( needs --data-raw )> 
