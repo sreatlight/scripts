@@ -21,3 +21,9 @@ EXAMPLE:
 > target-term -set 1<br />
 > target-term -run 1 hostname<br />
   
+# scripts - basq
+SQLi test with bash and curl - now with help inside ;)
+Also OSCP friendly ... is just a curl
+
+USAGE:
+> basq -w <wordlist> -r <curl file command( needs --data-raw )> 
